@@ -55,6 +55,20 @@ fn main() -> eyre::Result<()> {
                 } else {
                     update_battery_image(&eww_client, "100")?;
                 }
+
+                if percentage <= 20 {
+                    eww_client
+                        .update("battery_state", "low")
+                        .wrap_err("Failed to set battery_state")?;
+                } else if percentage <= 80 {
+                    eww_client
+                        .update("battery_state", "medium")
+                        .wrap_err("Failed to set battery_state")?;
+                } else {
+                    eww_client
+                        .update("battery_state", "high")
+                        .wrap_err("Failed to set battery_state")?;
+                }
             }
         }
 
