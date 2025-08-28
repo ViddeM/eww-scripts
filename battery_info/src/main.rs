@@ -1,7 +1,7 @@
 use battery::{Battery, units::Time};
 use clap::Parser;
 use eww::EwwClient;
-use eyre::{Context, ContextCompat};
+use eyre::Context;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -25,11 +25,36 @@ fn main() -> eyre::Result<()> {
 
     let eww_client = EwwClient::new();
 
+    let Some(battery) = battery else {
+        eww_client
+            .update("battery_exists", "false")
+            .wrap_err("Failed to write battery_exists")?;
+        return Ok(());
+    };
+
+    eww_client
+        .update("battery_exists", "true")
+        .wrap_err("Failed to write battery_exists")?;
+
     if args.percentage {
         let c = battery.state_of_charge();
 
         let num = f32::from(c);
         let percentage = (num * 100.0) as i32;
+
+        if percentage <= 20 {
+            eww_client
+                .update("battery_state", "low")
+                .wrap_err("Failed to set battery_state")?;
+        } else if percentage <= 80 {
+            eww_client
+                .update("battery_state", "medium")
+                .wrap_err("Failed to set battery_state")?;
+        } else {
+            eww_client
+                .update("battery_state", "high")
+                .wrap_err("Failed to set battery_state")?;
+        }
 
         match battery.state() {
             battery::State::Charging => update_battery_image(&eww_client, "charging")?,
@@ -54,20 +79,6 @@ fn main() -> eyre::Result<()> {
                     update_battery_image(&eww_client, "90")?;
                 } else {
                     update_battery_image(&eww_client, "100")?;
-                }
-
-                if percentage <= 20 {
-                    eww_client
-                        .update("battery_state", "low")
-                        .wrap_err("Failed to set battery_state")?;
-                } else if percentage <= 80 {
-                    eww_client
-                        .update("battery_state", "medium")
-                        .wrap_err("Failed to set battery_state")?;
-                } else {
-                    eww_client
-                        .update("battery_state", "high")
-                        .wrap_err("Failed to set battery_state")?;
                 }
             }
         }
@@ -115,16 +126,19 @@ fn format_time(hours: i32, minutes: i32, seconds: i32) -> String {
     format!("{:02}h:{:02}m:{:02}s", hours, minutes, seconds)
 }
 
-fn get_first_battery() -> eyre::Result<Battery> {
+fn get_first_battery() -> eyre::Result<Option<Battery>> {
     let manager = battery::Manager::new().wrap_err("Failed to create battery manager")?;
 
     let battery = manager
         .batteries()
         .wrap_err("Failed to get batteries")?
         .enumerate()
-        .find_map(|(_, battery)| Some(battery))
-        .wrap_err("Failed to find a battery")?
-        .wrap_err("Failed to get battery")?;
+        .find_map(|(_, battery)| Some(battery));
 
-    Ok(battery)
+    let battery = match battery {
+        Some(b) => b.wrap_err("Failed to get battery")?,
+        None => return Ok(None),
+    };
+
+    Ok(Some(battery))
 }
