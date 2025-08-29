@@ -1,4 +1,5 @@
 use clap::Parser;
+use eww::EwwClient;
 use eyre::{Context, ContextCompat};
 
 #[derive(Parser, Debug)]
@@ -34,6 +35,10 @@ fn main() -> eyre::Result<()> {
             .names
             .get(keyboard_layouts.current_idx as usize)
             .wrap_err("Failed to get current keyboard layout")?;
+
+        let eww_client = EwwClient::new();
+        update_flag(&eww_client, current).wrap_err("Failed to update flag image")?;
+
         print!("{current}");
     }
 
@@ -42,6 +47,22 @@ fn main() -> eyre::Result<()> {
             println!("{layout}");
         });
     }
+
+    Ok(())
+}
+
+fn update_flag(eww_client: &EwwClient, layout: &String) -> eyre::Result<()> {
+    let shortname = match layout.as_str() {
+        "English (US)" => "us",
+        "Swedish" => "se",
+        _ => {
+            eyre::bail!("Unknown keyboard layout {layout}");
+        }
+    };
+
+    eww_client
+        .update("keyboard_flag", &format!("images/flag_{shortname}.png"))
+        .wrap_err("Failed to update flag image path")?;
 
     Ok(())
 }

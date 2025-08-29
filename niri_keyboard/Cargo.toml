@@ -8,3 +8,6 @@ clap = { version = "4.5.46", features = ["derive"] }
 color-eyre = "0.6.5"
 eyre = "0.6.12"
 niri-ipc = "25.5.1"
+
+[dependencies.eww]
+path = "../eww"
