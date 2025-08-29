@@ -407,7 +407,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "niri-keyboard"
+name = "niri_keyboard"
 version = "0.1.0"
 dependencies = [
  "clap",
